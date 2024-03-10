@@ -139,8 +139,8 @@ def modified_matrices_calculate_range_output_without_translation(height, width, 
     range_u[1] = max(u, range_u[1])
     range_v[1] = max(v, range_v[1])
 
-    range_u = np.array(range_u, dtype=np.int)
-    range_v = np.array(range_v, dtype=np.int)
+    range_u = np.array(range_u, dtype=np.int64)
+    range_v = np.array(range_v, dtype=np.int64)
 
     if out_upperpixel > out_lowerpixel and opt:
 
@@ -175,10 +175,10 @@ def modified_matrices_calculate_range_output_without_translation(height, width, 
                 best_lower = lower_range
             if verbose:
                 print(steps_h, lower_range, x_best_lower, x_best_upper)
-        range_v = np.array([lower_range, upper_range], dtype=np.int)
+        range_v = np.array([lower_range, upper_range], dtype=np.int64)
 
         # for testing
-        range_u = np.array([x_best_lower, x_best_upper], dtype=np.int)
+        range_u = np.array([x_best_lower, x_best_upper], dtype=np.int64)
 
     return range_u, range_v
 

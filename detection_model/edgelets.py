@@ -54,7 +54,7 @@ def accumulate_orientation(orientations, quality, winSize=9, threshold=0.25):
             continue
         slope = dy / dx
         x = np.arange(j - int((winSize - 1) / 2), j + int((winSize - 1) / 2))
-        y = np.around(i - slope * j + slope * x).astype(np.int)
+        y = np.around(i - slope * j + slope * x).astype(np.int64)
         if (x < width).all() and (y < height).all():
             try:
                 mask[y, x] += quality[i, j]

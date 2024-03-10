@@ -116,8 +116,44 @@ class YoloTensorrt():
         assert im.shape == self.bindings['images'].shape, (im.shape, self.bindings['images'].shape)
         self.binding_addrs['images'] = int(im.data_ptr())
         self.context.execute_v2(list(self.binding_addrs.values()))
-        y = self.bindings['output'].data
+        y = self.bindings['output0'].data
         return y
+
+    # def forward(self, im, augment=False, visualize=False):
+        # # YOLOv5 MultiBackend inference
+        # b, ch, h, w = im.shape  # batch, channel, height, width
+
+        # print("type:", type(im), im.dtype, torch.sum(im))
+
+        # if self.fp16 and im.dtype != torch.float16:
+            # im = im.half()  # to FP16
+
+        # print("half ? :", type(im), im.dtype, torch.max(im), torch.min(im), im.shape)
+        # if True: #self.engine:  # TensorRT
+            # if im.shape != self.bindings['images'].shape:
+                # i = self.model.get_binding_index('images')
+                # self.context.set_binding_shape(i, im.shape)  # reshape if dynamic
+                # self.bindings['images'] = self.bindings['images']._replace(shape=im.shape)
+                # for name in self.output_names:
+                    # i = self.model.get_binding_index(name)
+                    # self.bindings[name].data.resize_(tuple(self.context.get_binding_shape(i)))
+            # s = self.bindings['images'].shape
+            # # assert im.shape == s, f"input size {im.shape} {'>' if self.dynamic else 'not equal to'} max model size {s}"
+            # print("PRINTING INPUT IMAGE ", im)
+            # #print("output_names : ", self.output_names)
+            # self.binding_addrs['images'] = int(im.data_ptr())
+            # self.context.execute_v2(list(self.binding_addrs.values()))
+            # y = [self.bindings[x].data for x in sorted(self.output_names)]
+        # # print(y, len(y),)
+        # # print(y[0].shape, y[1].shape, torch.sort(y[1][0][0]))
+        # # print("result : ",torch.unique(y[0]), torch.unique(y[1]))
+        # if isinstance(y, (list, tuple)):
+            # return self.from_numpy(y[0]) if len(y) == 1 else [self.from_numpy(x) for x in y]
+        # else:
+            # return self.from_numpy(y)
+
+    # def from_numpy(self, x):
+        # return torch.from_numpy(x).to(self.device) if isinstance(x, np.ndarray) else x
 
     def infer(self, threshold=0.5, visualize=False, conf_thres=0.25, iou_thres=0.45, agnostic_nms=False,
               max_det=1000, ):

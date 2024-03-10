@@ -8,7 +8,7 @@ from utils import getROIMouseEvent
 def run(source, classes, calibration, engine, threshold, savePath='./result', caliFlag=False, visualize=True,
         view=False,
         verbose=False, **kwargs):
-    app = Calibration_Yolo(source, detect_interval=15)
+    app = Calibration_Yolo(source, detect_interval=1)
     if kwargs.get('roi', None):
         roi = []
         _, frame = app.camera.read()
@@ -25,7 +25,7 @@ def run(source, classes, calibration, engine, threshold, savePath='./result', ca
         app.calibrate(visualize=visualize, save_path=savePath)
     else:
         app.load_calibration(calibration, (1600, 1600))
-        app.load_keypoint_model()
+        #app.load_keypoint_model()
         app.load_yolo_model(engine, classes, verbose=verbose)
         app.detect_orientation()
 
@@ -34,14 +34,14 @@ if __name__ == '__main__':
     ################# test data ####################
 
     json_path = "./yolov5/classes.json"
-    engine_path = "./yolov5/weights/yolov5m16.engine"
+    engine_path = "./yolov5/weights/yolov5m.engine"
     # video_path = "../../Car_ReIdentification_application/1-2-981_Trim.mp4"
-    video_path = r"E:\datasets\0330数据集\eval\o4.mp4"
+    video_path = r"/home/dzhura/ComputerVision/data/sample_video.mp4"
     # video_path = r"E:\datasets\0330数据集\calibrate\o4.mp4"
     # video_path = r"E:\datasets\0330数据集\o2_Trim.mp4"
     # video_path = r"E:\datasets\surveilliance\v6.avi"
     # calibration_path = './results/new/calibrations.npy'
-    calibration_path = './results/video4/calibrations.npy'
+    calibration_path = './results/sample/calibrations.npy'
     cali_Flag = False
     visualizeFlag = True
     selectROI = False
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument('--roi', '-r', default=selectROI, help='whether select the ROI from source video.')
     parser.add_argument('--calibration', '-C', default=calibration_path, help='the calibration file path')
     parser.add_argument('--caliFlag', '-f', default=cali_Flag, help='calibration or inference')
-    parser.add_argument('--threshold', '-t', default=0.7, help='the threshold of determining high quality edge')
+    parser.add_argument('--threshold', '-t', default=0.3, help='the threshold of determining high quality edge')
     parser.add_argument('--visualize', '-V', default=visualizeFlag, help='visualize the calibration process')
     parser.add_argument('--savePath', '-S', default=save_path, help='visualize the calibration process')
     parser.add_argument('--view', default=False, help='visualize the detect edges process')

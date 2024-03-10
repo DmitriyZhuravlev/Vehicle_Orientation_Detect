@@ -88,8 +88,7 @@ python app.py --source ${video path} --engine ${tensorRT engine} --caliFlag Fals
 ### Orientation Detection
 
 - KeyPoint Detect
-    - Based on an 2D human position estimation network project [openpifpaf](https://github.com/openpifpaf/openpifpaf)
-    - we get a pair of keypoints which can represent the orientation of vehicle(such as car lights)
+    - Based on an Lifting 2D Object Detection to 3D: Geometric Approach in Bird-Eye-View [article](https://link.springer.com/chapter/10.1007/978-3-031-09076-9_21)
       ![](./image/chap04/sigle_pair_keypoint.jpg)
 
 - Get Bird-View image plane
