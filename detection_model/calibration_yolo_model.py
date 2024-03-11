@@ -788,6 +788,28 @@ class Calibration_Yolo(object):
                 output = frame.copy()
                 warp = cv2.warpPerspective(frame, self.perspective, self.target_shape)
 
+                if self.previous_frame is None:
+                    self.previous_frame = self.current_frame.copy()
+                    continue
+                    
+            
+                pimg, cimg = self.previous_frame, self.current_frame
+                prev = cv2.goodFeaturesToTrack(pimg, mask=None, **good_features_parameters)
+                next_points, status, error = cv2.calcOpticalFlowPyrLK(pimg, cimg, prev, None, **optical_flow_parameters)
+            
+                # Selects good feature points for previous position
+                good_old = prev[status == 1].astype(int)
+            
+                # Selects good feature points for next position
+                good_new = next_points[status == 1].astype(int)
+                
+                
+                # Draw displacement vectors on the combined frame
+                if debug:
+                    for i in range(len(good_old)):
+                        pt1 = tuple(good_old[i])
+                        pt2 = tuple(good_new[i])
+                        cv2.arrowedLine(frame, pt1, pt2, cv_colors.BLUE.value, 2)
 
                 mask = np.zeros_like(self.current_frame)
                 boxes = self.detect_car(frame)
@@ -795,6 +817,7 @@ class Calibration_Yolo(object):
                 # Initialize an empty NumPy array for points outside the loop
                 points = np.empty((0, 2), dtype=np.float32)
                 print(f"detect: {time() - start}")
+                cube_color = cv_colors.MINT.value
                 
                 for i, box in enumerate(boxes):
     
@@ -811,11 +834,31 @@ class Calibration_Yolo(object):
     
                     xmin, ymin, xmax, ymax = box
     
+                    range_mask = (
+                        (good_old[:, 0] >= xmin) & (good_old[:, 0] <= xmax) &
+                        (good_old[:, 1] >= ymin) & (good_old[:, 1] <= ymax)
+                    )
+
+                    # if not np.any(range_mask):
+                        # projection_list.append(prj)
+                        # continue  # Skip this box if there are no points in the range
     
-    
-                    print("vp :", vp)
-                    #vis_model(frame, edgelets1, vp1, output_path = None)
-                    #vp = vp1 / vp1[2]
+                        #p1, p2 = sum_vector_within_longest_cluster(frame, good_old, good_new, range_mask)
+                        #p1, p2, frame = get_moving_direction(frame, good_old, good_new, range_mask, box) #vector_with_max_y(frame, good_old, good_new, range_mask)
+                        #p1, p2, frame = vector_with_max_y(frame, good_old, good_new, range_mask, scale=5.0)
+                        
+                    edgelets1 = compute_edgelets(good_old.reshape(-1, 2), good_new.reshape(-1, 2), box, box)
+                    #Visualize the edgelets
+                    if debug:
+                        vis_edgelets(frame, edgelets1)
+                    if edgelets1[1].shape[0] > 0:
+                        vp_d = ransac_vanishing_point(edgelets1, frame.shape[0],  20, threshold_inlier=5)
+                        if vp_d is not None:
+                            if debug:
+                                vis_model(frame, edgelets1, vp_d, output_path = None)
+                            vp = vp_d / vp_d[2]
+                            cube_color = cv_colors.PURPLE.value
+
                     print(f"vp : {vp}")
                 
                     # Draw arrowed line from vp1 through the middle of the lower edge of the box on image 1
@@ -880,7 +923,7 @@ class Calibration_Yolo(object):
                                 solutions = find_rectangle_sides(prev_box_ipm, prev_prj.orientation, prev_prj.type,  box_ipm, diff[:2], t)
                             except:
                                 print("solution error")
-                                continue
+                                #continue
     
                             assert len(solutions) < 2,  f"Invalid number of solutions: {len(solutions)}"
                             if len(solutions) == 0:
@@ -912,13 +955,13 @@ class Calibration_Yolo(object):
                                 # Assuming get_upper_face is a function that extracts the upper face based on box and lower_face[:, :2]
                                 #left_van = vp[:2]
                                 if t == 'r':
-                                    upper_face = get_upper_face(box, lower_face[:, :2], left_van = vp[:2], im = frame)
+                                    upper_face = get_upper_face_r(box, lower_face[:, :2], left_van = vp[:2], im = frame)
                                 else:
                                     upper_face = get_upper_face_l(box, lower_face[:, :2], left_van = vp[:2], im = frame)
     
                                 print("Upper Face:\n", upper_face)
                                 
-                                frame = draw_cube(frame, lower_face[: ,:2], upper_face)
+                                frame = draw_cube(frame, lower_face[: ,:2], upper_face, color= cube_color, lw=2)
                                 
                                 warp = cv2.polylines(warp, [np.array(w_points, dtype=np.int64)], isClosed=True, color=cv_colors.RED.value, thickness=2)
                                     
@@ -928,6 +971,17 @@ class Calibration_Yolo(object):
                             print(f"keypoint: {time() - start}")
 
                   
+ 
+
+                            # cv2.putText(frame, "angle ipm:" + str(np.around(math.degrees(orientation_IPM), 3)), (xmax, ymax),
+                                        # cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                            # # cv2.putText(frame, "class:" + cls, (xmin, ymin),
+                                        # # cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                            # cv2.rectangle(frame, box[:2], box[-2:], (0, 255, 0), 1)
+            
+                    # Updates previous good feature points
+                    prev = good_new.reshape(-1, 1, 2)
+                    
  
 
             self.previous_frame = self.current_frame.copy()
@@ -1317,7 +1371,11 @@ class Calibration_Yolo(object):
         origin_edges = cv2.Canny(vehicle_current, 255 / 2, 255)
         edges = cv2.Canny(vehicle_current, 255 / 2, 255) - cv2.Canny(vehicle_background, 255 / 2, 255)
         orientation, quality = neighborhood(edges, winSize=winSize)
-        accumulation, t = accumulate_orientation(orientation, quality, winSize=winSize, threshold=threshold)
+        try:
+            accumulation, t = accumulate_orientation(orientation, quality, winSize=winSize, threshold=threshold)
+        except:
+            accumulation = edges
+            
 
         res = cv2.addWeighted(accumulation.astype(np.float32), 0.9, edges.astype(np.float32), 0.1, 0)
         _, res = cv2.threshold(res.astype(np.uint8), 127, 255, cv2.THRESH_OTSU)
