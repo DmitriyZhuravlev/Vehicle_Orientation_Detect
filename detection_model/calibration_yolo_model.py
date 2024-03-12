@@ -34,7 +34,7 @@ with warnings.catch_warnings():
     warnings.filterwarnings("default")  # or use warnings.resetwarnings()
 
 
-debug = False#True
+debug = True
 
 #good_features_parameters = dict(maxCorners=50, qualityLevel=0.3, minDistance=7, blockSize=7, useHarrisDetector=True,  k=0.04)
 # good_features_parameters = dict(maxCorners=200, qualityLevel=0.3, minDistance=7, blockSize=5, useHarrisDetector=True, k=0.04)
@@ -709,7 +709,7 @@ class Calibration_Yolo(object):
                 cv2.destroyAllWindows()
                 break
 
-
+# TODO use direction
     def find_corresponding_box(self, current_box, threshold = 50):
             # Implement logic to find corresponding box based on tracked points and previous boxes
             # You may use similarity metrics or other matching techniques
@@ -756,7 +756,13 @@ class Calibration_Yolo(object):
                                          # [-4.70089448e-01, -2.34697869e+01,  1.15890480e+04],
                                          # [-1.08570046e-04, -3.75704350e-03,  1.00000000e+00]]
                                         # )
-        # self.target_shape = [4600, 3900]                                                                 
+        # self.target_shape = [4600, 3900]
+        flag, frame = self.camera.read()
+        if self.scale != 1:
+            frame = cv2.resize(frame, (0, 0), fx=self.scale, fy=self.scale, interpolation=cv2.INTER_LINEAR)
+
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Adjust codec as needed
+        output_video = cv2.VideoWriter('output_video.avi', fourcc, 4.0, (frame.shape[1], frame.shape[0]))
 
         while True:
             flag, original_frame = self.camera.read()
@@ -812,7 +818,7 @@ class Calibration_Yolo(object):
                         cv2.arrowedLine(frame, pt1, pt2, cv_colors.BLUE.value, 2)
 
                 mask = np.zeros_like(self.current_frame)
-                boxes = self.detect_car(frame)
+                boxes = self.detect_all(frame)
     
                 # Initialize an empty NumPy array for points outside the loop
                 points = np.empty((0, 2), dtype=np.float32)
@@ -827,6 +833,7 @@ class Calibration_Yolo(object):
                         color = cv_colors.RED.value
                     else:
                         color = cv_colors.BLUE.value
+                    color = cv_colors.BLUE.value
                         
                     cv2.rectangle(frame, box[:2], box[2:], color, 1)
                     #prj = Projection(box = box, type = t)
@@ -950,6 +957,12 @@ class Calibration_Yolo(object):
     
                                 lower_face = pointsW @ np.linalg.inv(self.perspective).T
                                 lower_face = lower_face / lower_face[:, -1].reshape(-1, 1)
+                                
+                                for p in lower_face[:, :2]:
+                                    if p[1] < ymin: p[1] = ymin
+                                    if p[1] > ymax: p[1] = ymax
+                                    if p[0] < xmin: p[0] = xmin
+                                    if p[0] > xmax: p[0] = xmax
                                 print("Lower Face:\n", lower_face)
                                 
                                 # Assuming get_upper_face is a function that extracts the upper face based on box and lower_face[:, :2]
@@ -961,7 +974,7 @@ class Calibration_Yolo(object):
     
                                 print("Upper Face:\n", upper_face)
                                 
-                                frame = draw_cube(frame, lower_face[: ,:2], upper_face, color= cube_color, lw=2)
+                                frame = draw_cube(frame, lower_face[: ,:2], upper_face, color= cv_colors.MINT.value, lw=2)
                                 
                                 warp = cv2.polylines(warp, [np.array(w_points, dtype=np.int64)], isClosed=True, color=cv_colors.RED.value, thickness=2)
                                     
@@ -980,7 +993,7 @@ class Calibration_Yolo(object):
                             # cv2.rectangle(frame, box[:2], box[-2:], (0, 255, 0), 1)
             
                     # Updates previous good feature points
-                    prev = good_new.reshape(-1, 1, 2)
+                prev = good_new.reshape(-1, 1, 2)
                     
  
 
@@ -999,11 +1012,14 @@ class Calibration_Yolo(object):
             cv2.imwrite(f'original/frame_{self.frame_count}.png', in_frame)
             cv2.imwrite(f'output/frame_{self.frame_count}.png', frame)
             cv2.imwrite(f'output/warp_{self.frame_count}.png', warp)
+            
+            output_video.write(frame)  # Write the frame to the video
 
             if cv2.waitKey(1) & 0xFF == 27:
                 print(f"平均角度为{np.average(np.abs(orientations))}")
                 cv2.imwrite('frame1.jpg', frame)
                 self.camera.release()
+                output_video.release()
                 cv2.destroyAllWindows()
                 break
 
@@ -1308,6 +1324,19 @@ class Calibration_Yolo(object):
             [classes], [boxes] = cls, bs
             # filter cars
             index = [True if c in ['car', 'bus', 'truck', ] else False for c in classes]
+            cars_boxes = boxes[index]
+            return cars_boxes
+        else:
+            return []
+ 
+
+    def detect_all(self, frame, threshold=0.3):
+        self.yolo.reload_images(frame)
+        cls, bs = self.yolo.infer(threshold=threshold)
+        if cls:
+            [classes], [boxes] = cls, bs
+            # filter cars
+            index = [True if c in ['car', 'bus', 'truck', 'person', 'bicycle', 'motorcycle' ] else False for c in classes]
             cars_boxes = boxes[index]
             return cars_boxes
         else:

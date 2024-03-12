@@ -36,12 +36,13 @@ if __name__ == '__main__':
     json_path = "./yolov5/classes.json"
     engine_path = "./yolov5/weights/yolov5m.engine"
     # video_path = "../../Car_ReIdentification_application/1-2-981_Trim.mp4"
-    video_path = r"/home/dzhura/ComputerVision/data/sample_video.mp4"
+    video_path = r"/home/dzhura/ComputerVision/data/sample_video.mp4" #traffic.mp4" #sample_video.mp4"
     # video_path = r"E:\datasets\0330数据集\calibrate\o4.mp4"
     # video_path = r"E:\datasets\0330数据集\o2_Trim.mp4"
     # video_path = r"E:\datasets\surveilliance\v6.avi"
     # calibration_path = './results/new/calibrations.npy'
     calibration_path = './results/sample/calibrations.npy'
+    #calibration_path = './results/traffic/calibrations.npy'
     cali_Flag = False
     visualizeFlag = True
     selectROI = False
